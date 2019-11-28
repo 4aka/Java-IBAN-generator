@@ -1,0 +1,142 @@
+package generate;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.Random;
+import java.util.Scanner;
+
+public class IBAN {
+
+	/**
+	 * Version 1.0
+	 * 
+	 * Now it works for UA.
+	 * 
+	 * MFO keying does not works. But it is easy to use :) For example account 12311
+	 * keying with MFO (MFI) 300335 And next keying account is 12322, 12333, 12344.
+	 * (+ 11)
+	 */
+
+	private static Scanner in;
+	public static final String PATH = System.getProperty("user.dir");
+
+	public static void main(String[] args) throws IOException, InterruptedException {
+		in = new Scanner(System.in);
+
+		System.out.println("Choose: ");
+		System.out.println("Press 1 - print IBAN list");
+		System.out.println("Press 2 - generate own IBAN");
+		String menu = in.nextLine();
+
+		if (menu.contains("1")) {
+			System.out.print("Insert MFO = ");
+			String MFO = in.nextLine();
+			printList(true, MFO);
+			System.out.println("Generate more? Press +");
+			while (in.nextLine().contains("+")) {
+				printList(true, MFO);
+				if (!in.nextLine().contains("+")) {
+					break;
+				}
+				System.out.println("Generate more? Press +" + in.nextLine());
+			}
+		} else if (menu.contains("2")) {
+			System.out.print("Insert MFO = ");
+			String MFO = in.nextLine();
+			System.out.print("Insert account number = ");
+			String account = in.nextLine();
+			getIBAN(MFO, account, "UA");
+		}
+	}
+
+	static public void fail(String message) {
+		if (message == null) {
+			throw new AssertionError();
+		}
+		throw new AssertionError(message);
+	}
+
+	/**
+	 * 
+	 * @param MFO
+	 * @param account that you want
+	 * @param countryCode (UA)
+	 * @return
+	 */
+	public static String getIBAN(String MFO, String account, String countryCode) {
+
+		// TODO conversion every symbol to int. A = 10.
+		int U = 30;
+		int A = 10;
+		countryCode = "UA";
+		char[] alphabet = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+				'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
+
+		char[] acc = account.toUpperCase().toCharArray();
+		String fullacc = "";
+
+		if (account.length() > 19) {
+			fail("Account length too long. 19 chars Max.");
+		} else if (account.length() < 5) {
+			fail("Account length too short. 5 chars Min.");
+		}
+
+		for (int j = 0; j < account.length(); j++) {
+			if (acc[j] >= 48 && acc[j] <= 57) {
+				fullacc = fullacc + acc[j];
+				continue;
+			} else if (acc[j] <= 90 && acc[j] >= 65) {
+				for (int k = 0; k < alphabet.length; k++) {
+					if (alphabet[k] == acc[j]) {
+						fullacc = fullacc + Character.getNumericValue(acc[j]);
+					}
+				}
+			} else {
+				fail("Account number has incorrect symbol.");
+			}
+		}
+		int zero = (25 - MFO.length() - account.length());
+		String zeroLine = "0";
+
+		for (int i = 2; i <= zero; i++) {
+			if (i != 0) {
+				zeroLine += "0";
+			}
+		}
+		BigInteger how = new BigInteger(MFO + zeroLine + fullacc.toUpperCase() + U + A + "00", 10);
+		BigInteger rem = new BigInteger("97", 10);
+		BigInteger big = how.remainder(rem);
+
+		int sum = 98 - big.intValue();
+		String result = "";
+
+		if (sum <= 9) {
+			String sumRather = "0" + Integer.toString(sum);
+			result = countryCode + sumRather + MFO + zeroLine + account.toUpperCase();
+			return result;
+		}
+		result = countryCode + sum + MFO + zeroLine + account.toUpperCase();
+		System.out.println(result);
+
+		return result;
+	}
+
+	/**
+	 * For example
+	 * 
+	 * @param printList
+	 * @param mfo
+	 */
+	public static void printList(boolean printList, String mfo) {
+		if (printList) {
+			String[] mfo300335 = { "11002000000001", "12345600001111", "11112111111111", "22221222222211" };
+			String[] ran = { "11", "22", "33", "44", "55", "66", "77", "88" };
+
+			for (int j = 1; j <= 10; j++) {
+				BigInteger count = new BigInteger(ran[new Random().nextInt(ran.length)], 10);
+				BigInteger account = new BigInteger(mfo300335[new Random().nextInt(mfo300335.length)], 10);
+				getIBAN(mfo, account.add(count).toString(), "UA");
+			}
+		}
+	}
+}
