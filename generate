@@ -45,79 +45,73 @@ public class IBAN {
 			String MFO = in.nextLine();
 			System.out.print("Insert account number = ");
 			String account = in.nextLine();
-			getIBAN(MFO, account, "UA");
+			System.out.print("Insert ISO country code = ");
+			String countryCode = in.nextLine();
+			getIBAN(MFO, account, countryCode);
 		}
-	}
-
-	static public void fail(String message) {
-		if (message == null) {
-			throw new AssertionError();
-		}
-		throw new AssertionError(message);
 	}
 
 	/**
 	 * 
 	 * @param MFO
-	 * @param account that you want
-	 * @param countryCode (UA)
+	 * @param account
+	 *            that you want
+	 * @param ISOCode
+	 *            (UA)
 	 * @return
 	 */
-	public static String getIBAN(String MFO, String account, String countryCode) {
-
-		// TODO conversion every symbol to int. A = 10.
-		int U = 30;
-		int A = 10;
-		countryCode = "UA";
-		char[] alphabet = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-				'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
-
+	public static String getIBAN(String MFO, String account, String ISOCode) {
+		String fl = ""; // first country code letter
+		String sl = ""; // second country code letter
+		char[] iso = ISOCode.toUpperCase().toCharArray();
+		
+		if (ISOCode.length() == 0 && ISOCode.length() > 2) {
+			fail("Error. Country code is incorrect.");
+		} else {
+			for (int k = 65; k < 90; k++) {
+				if ((int) iso[0] == k) fl = Integer.toString((k - 65) + 10); // U = 30
+				if ((int) iso[1] == k) sl = Integer.toString((k - 65) + 10); // A = 10
+			}
+		}
 		char[] acc = account.toUpperCase().toCharArray();
 		String fullacc = "";
 
-		if (account.length() > 19) {
-			fail("Account length too long. 19 chars Max.");
-		} else if (account.length() < 5) {
-			fail("Account length too short. 5 chars Min.");
+		if (account.length() < 5 || account.length() > 19) { // for UA
+			fail("Error. Lenght must be from 5 to 19 chars Max.");
 		}
-
-		for (int j = 0; j < account.length(); j++) {
-			if (acc[j] >= 48 && acc[j] <= 57) {
-				fullacc = fullacc + acc[j];
+		for (int j = 0; j < account.length(); j++) {  
+			if (acc[j] >= 48 && acc[j] <= 57) { // from 0 to 9 (ASCII 48 - 57)
+				fullacc += acc[j];
 				continue;
-			} else if (acc[j] <= 90 && acc[j] >= 65) {
-				for (int k = 0; k < alphabet.length; k++) {
-					if (alphabet[k] == acc[j]) {
-						fullacc = fullacc + Character.getNumericValue(acc[j]);
+			} else if (acc[j] <= 90 && acc[j] >= 65) { // from A to Z (ASCII 65 - 90)
+				for (int k = 65; k < 90; k++) {
+					if (acc[j] == k) {
+						String val = Integer.toString((k - 65) + 10); // to IBAN A = 10
+						fullacc += val;
 					}
 				}
 			} else {
-				fail("Account number has incorrect symbol.");
+				fail("Error. Account number has incorrect symbol.");
 			}
 		}
-		int zero = (25 - MFO.length() - account.length());
 		String zeroLine = "0";
 
-		for (int i = 2; i <= zero; i++) {
-			if (i != 0) {
-				zeroLine += "0";
-			}
+		for (int i = 2; i <= (25 - MFO.length() - account.length()); i++) {
+			if (i != 0) zeroLine += "0"; // UA checksum 300335 *0x?* account number 
 		}
-		BigInteger how = new BigInteger(MFO + zeroLine + fullacc.toUpperCase() + U + A + "00", 10);
+		BigInteger how = new BigInteger(MFO + zeroLine + fullacc + fl + sl + "00", 10); // full account value transforming to integer
 		BigInteger rem = new BigInteger("97", 10);
 		BigInteger big = how.remainder(rem);
 
 		int sum = 98 - big.intValue();
-		String result = "";
 
 		if (sum <= 9) {
 			String sumRather = "0" + Integer.toString(sum);
-			result = countryCode + sumRather + MFO + zeroLine + account.toUpperCase();
+			String result = ISOCode.toUpperCase() + sumRather + MFO + zeroLine + account.toUpperCase();
 			return result;
 		}
-		result = countryCode + sum + MFO + zeroLine + account.toUpperCase();
+		String result = ISOCode.toUpperCase() + sum + MFO + zeroLine + account.toUpperCase();
 		System.out.println(result);
-
 		return result;
 	}
 
@@ -138,5 +132,16 @@ public class IBAN {
 				getIBAN(mfo, account.add(count).toString(), "UA");
 			}
 		}
+	}
+
+	/**
+	 * 
+	 * @param message
+	 */
+	static public void fail(String message) {
+		if (message == null) {
+			throw new AssertionError();
+		}
+		throw new AssertionError(message);
 	}
 }
