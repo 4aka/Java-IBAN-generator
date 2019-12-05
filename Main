@@ -1,0 +1,46 @@
+package generate;
+
+import java.util.Scanner;
+
+public class IBAN_main {
+
+	public static void main(String[] args) {
+		/**
+		 * Version 1.0
+		 * 
+		 * Now it works for UA.
+		 * 
+		 * MFO keying does not works. But it is easy to use :) For example account 12311
+		 * keying with MFO (MFI) 300335 And next keying account is 12322, 12333, 12344.
+		 * (+ 11)
+		 */
+
+		Scanner in = new Scanner(System.in);
+		System.out.println("Choose: ");
+		System.out.println("Press 1 - print IBAN list");
+		System.out.println("Press 2 - generate own IBAN");
+		String menu = in.nextLine();
+
+		if (menu.contains("1")) {
+			System.out.print("Insert MFO = ");
+			String MFO = in.nextLine();
+			IBAN.printList(true, MFO);
+			System.out.println("Generate more? Press +");
+			while (in.nextLine().contains("+")) {
+				IBAN.printList(true, MFO);
+				if (!in.nextLine().contains("+")) {
+					break;
+				}
+				System.out.println("Generate more? Press +" + in.nextLine());
+			}
+		} else if (menu.contains("2")) {
+			System.out.print("Insert MFO = ");
+			String MFO = in.nextLine();
+			System.out.print("Insert account number = ");
+			String account = in.nextLine();
+			System.out.print("Insert ISO country code = ");
+			String countryCode = in.nextLine();
+			IBAN.getIBAN(MFO, account, countryCode);
+		}
+	}
+}
