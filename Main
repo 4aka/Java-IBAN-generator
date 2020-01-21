@@ -1,33 +1,46 @@
 package generate;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class IBAN_main {
+	static String currentPath = System.getProperty("user.dir");
 
+	/**
+	 * Version 1.0
+	 * 
+	 * Now it works for UA.
+	 * 
+	 * MFO keying does not works. But it is easy to use :) For example account 12311
+	 * keying with MFO (MFI) 300335 And next keying account is 12322, 12333, 12344.
+	 * (+ 11)
+	 */
+
+	/**
+	 * Press 1 - print IBAN list
+	 * Press 2 - generate own IBAN
+	 * Press 3 - convert IBAN list
+	 * 
+	 * @param args
+	 */
 	public static void main(String[] args) {
-		/**
-		 * Version 1.0
-		 * 
-		 * Now it works for UA.
-		 * 
-		 * MFO keying does not works. But it is easy to use :) For example account 12311
-		 * keying with MFO (MFI) 300335 And next keying account is 12322, 12333, 12344.
-		 * (+ 11)
-		 */
-
+		IBAN iban = new IBAN();
 		Scanner in = new Scanner(System.in);
 		System.out.println("Choose: ");
 		System.out.println("Press 1 - print IBAN list");
 		System.out.println("Press 2 - generate own IBAN");
+		System.out.println("Press 3 - convert IBAN list");
 		String menu = in.nextLine();
 
 		if (menu.contains("1")) {
 			System.out.print("Insert MFO = ");
 			String MFO = in.nextLine();
-			IBAN.printList(true, MFO);
+			iban.printList(true, MFO);
 			System.out.println("Generate more? Press +");
+			
 			while (in.nextLine().contains("+")) {
-				IBAN.printList(true, MFO);
+				iban.printList(true, MFO);
 				if (!in.nextLine().contains("+")) {
 					break;
 				}
@@ -38,9 +51,24 @@ public class IBAN_main {
 			String MFO = in.nextLine();
 			System.out.print("Insert account number = ");
 			String account = in.nextLine();
+
+			while (!iban.keying(MFO, account)){
+				System.out.println("Keying wrong!");
+				System.out.println("Insert account number = ");
+				account = in.nextLine();
+				iban.keying(MFO, account);
+			};
 			System.out.print("Insert ISO country code = ");
 			String countryCode = in.nextLine();
-			IBAN.getIBAN(MFO, account, countryCode);
+			iban.getIBAN(MFO, account, countryCode);
+			
+		} else if (menu.contains("3")) {
+			System.out.println("Create file 'iban.txt' near this app.");
+			System.out.println("File name must be 'iban.txt'");
+			System.out.println("Insert mfo");
+			String mfo = in.nextLine();
+			Path path = Paths.get(currentPath + "/iban.txt");
+			iban.convert(path, mfo);
 		}
 	}
 }
