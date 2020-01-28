@@ -1,9 +1,26 @@
 package generate;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Random;
 
-public class ibanGenClean {
+public class IBANGen {
+	
+	String currentPath = System.getProperty("user.dir");
 
+	/**
+	 * Check parameters length.
+	 * 
+	 * @param MFO
+	 * @param account
+	 * @param ISOCode
+	 * @return
+	 */
 	public boolean checkAccountNumbner(String MFO, String account, String ISOCode) {
 		char[] iso = ISOCode.toUpperCase().toCharArray();
 		char[] acc = account.toUpperCase().toCharArray();
@@ -23,14 +40,58 @@ public class ibanGenClean {
 		}
 		return true;
 	}
-	
-	private final int[] WEIGHT = new int[] { 1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3 };
-	
+
 	/**
+	 * Generate integer
+	 * 
+	 * @param length
+	 * @return String
+	 */
+	public String generateInt(int length) {
+		String result = "";
+		Random r = new Random();
+		
+		for (int i = 0; i < length; i++) {
+			String bytes = Integer.toString(r.nextInt(9));
+			result += bytes;
+		}
+		return result;
+	}
+
+	/**
+	 * Generate list of accounts
+	 * 
+	 * @param howMuchAcc
+	 * @param isIBAN
+	 * @param MFO
+	 */
+	public void generateAccNumbers(String howMuchAcc, boolean isIBAN, String MFO) {
+		int i = Integer.parseInt(howMuchAcc);
+
+		int count = 0;
+		do {
+			String acc = generateInt(15);
+
+			if (keying(MFO, acc)) {
+
+				if (isIBAN) {
+					getIBAN(MFO, acc, "UA");
+				} else {
+					System.out.println(acc);
+				}
+				count++;
+			}
+		} while (count != i);
+	}
+
+	/**
+	 * Check keying account number before get IBAN.
+	 * 
 	 * @param mfo
 	 * @param acc
 	 */
 	public boolean keying(String mfo, String acc) {
+		int[] WEIGHT = new int[] { 1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3 };
 		char key;
 		int sum;
 		char[] str = (mfo.substring(0, 5) + acc).toCharArray();
@@ -46,11 +107,31 @@ public class ibanGenClean {
 		else
 			return false;
 	}
+	
+	/**
+	 * Convert old account number to IBAN
+	 * 
+	 */
+	public void convert(Path filePath, String mfo) {
+		File out = new File(currentPath + "/iban-out.txt");
+		System.out.println("Your file location: " + out);
 
+		try {
+			List<String> content = Files.readAllLines(filePath);
+			FileOutputStream fout = new FileOutputStream(out, true);
+
+			for (int i = 0; i < content.size(); i++) {
+				String result = getIBAN(mfo, content.get(i), "UA") + "\n";
+				fout.write(result.getBytes());
+			}
+			fout.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * 'UA' 'checksum' 'MFO' *0x?* 'account' 'number'
-	 * 
 	 * 
 	 * @param MFO
 	 * @param account
@@ -68,8 +149,10 @@ public class ibanGenClean {
 
 		// Get integer of letter from ISOCode (A = 10, B = 11 ...)
 		for (int k = 65; k <= 90; k++) {
-			if ((int) iso[0] == k) fl = Integer.toString((k - 65) + 10);
-			if ((int) iso[1] == k) sl = Integer.toString((k - 65) + 10);
+			if ((int) iso[0] == k)
+				fl = Integer.toString((k - 65) + 10);
+			if ((int) iso[1] == k)
+				sl = Integer.toString((k - 65) + 10);
 		}
 
 		// Find account symbol in ASCII table
@@ -113,8 +196,9 @@ public class ibanGenClean {
 		System.out.println(result);
 		return result;
 	}
-	
+
 	/**
+	 * Assert
 	 * 
 	 * @param message
 	 */
