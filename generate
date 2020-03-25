@@ -12,6 +12,18 @@ import java.util.Random;
 public class IBANGen {
 	
 	String currentPath = System.getProperty("user.dir");
+	
+    /**
+     * Get random account.
+     * @return account with mfo = 300335
+     */
+    public String getAcc() {
+        return generateAccNumbers(1, true, "300335");
+    }
+    
+    public String getAcc(String mfo) {
+        return generateAccNumbers(1, true, mfo);
+    }
 
 	/**
 	 * Check parameters length.
@@ -61,27 +73,27 @@ public class IBANGen {
 	/**
 	 * Generate list of accounts
 	 * 
-	 * @param howMuchAcc
+	 * @param length
 	 * @param isIBAN
 	 * @param MFO
 	 */
-	public void generateAccNumbers(String howMuchAcc, boolean isIBAN, String MFO) {
-		int i = Integer.parseInt(howMuchAcc);
-
+	public String generateAccNumbers(int length, boolean isIBAN, String MFO) {
 		int count = 0;
+		String acc = "";
+
 		do {
-			String acc = generateInt(15);
-
-			if (keying(MFO, acc)) {
-
+			String ran = generateInt(15);
+			if (keying(MFO, ran)) {
 				if (isIBAN) {
-					getIBAN(MFO, acc, "UA");
+					acc = getIBAN(MFO, ran, "UA");
+					return acc;
 				} else {
-					System.out.println(acc);
+					System.out.println(ran);
 				}
 				count++;
 			}
-		} while (count != i);
+		} while (count != length);
+		return acc;
 	}
 
 	/**
@@ -91,6 +103,11 @@ public class IBANGen {
 	 * @param acc
 	 */
 	public boolean keying(String mfo, String acc) {
+		
+		if (mfo.length() != 6) {
+			System.out.println("MFO is incorrect!");
+		}
+
 		int[] WEIGHT = new int[] { 1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3 };
 		char key;
 		int sum;
@@ -189,12 +206,9 @@ public class IBANGen {
 
 		if (sum <= 9) {
 			String sumRather = "0" + Integer.toString(sum);
-			String result = ISOCode.toUpperCase() + sumRather + MFO + zeroLine + account.toUpperCase();
-			return result;
+			return ISOCode.toUpperCase() + sumRather + MFO + zeroLine + account.toUpperCase();
 		}
-		String result = ISOCode.toUpperCase() + sum + MFO + zeroLine + account.toUpperCase();
-		System.out.println(result);
-		return result;
+		return ISOCode.toUpperCase() + sum + MFO + zeroLine + account.toUpperCase();
 	}
 
 	/**
