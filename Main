@@ -1,63 +1,225 @@
 package generate;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Scanner;
+import java.util.List;
+import java.util.Random;
 
-public class IBAN_main {
-	static String currentPath = System.getProperty("user.dir");
+public class IBANGen {
+	
+	String currentPath = System.getProperty("user.dir");
+	
+    /**
+     * Get random account.
+     * @return account with mfo = 300335
+     */
+    public String getAcc() {
+        return generateAccNumbers(1, true, "300335");
+    }
+    
+    public String getAcc(String mfo) {
+        return generateAccNumbers(1, true, mfo);
+    }
 
 	/**
-	 * Press 1 - print IBAN list
-	 * Press 2 - generate own IBAN
-	 * Press 3 - convert IBAN list
-	 * Press 4 - generate accounts list (random 7)
+	 * Check parameters length.
 	 * 
-	 * @param args
+	 * @param MFO
+	 * @param account
+	 * @param ISOCode
+	 * @return
 	 */
-	public static void main(String[] args) {
-		IBANGen gen = new IBANGen();
-		Scanner in = new Scanner(System.in);
-		System.out.println("Choose: ");
-		System.out.println("Press 1 - generate own IBAN");
-		System.out.println("Press 2 - convert IBAN list");
-		System.out.println("Press 3 - generate accounts list (r)");
-		String menu = in.nextLine();
+	public boolean checkAccountNumbner(String MFO, String account, String ISOCode) {
+		char[] iso = ISOCode.toUpperCase().toCharArray();
+		char[] acc = account.toUpperCase().toCharArray();
 
-		if (menu.contains("1")) {
-			System.out.print("Insert MFO = ");
-			String MFO = in.nextLine();
-			System.out.print("Insert account number = ");
-			String account = in.nextLine();
-
-			while (!gen.keying(MFO, account)){
-				System.out.println("Keying wrong!");
-				System.out.println("Insert account number = ");
-				account = in.nextLine();
-				gen.keying(MFO, account);
-			};
-			System.out.print("Insert ISO country code = ");
-			String countryCode = in.nextLine();
-			gen.getIBAN(MFO, account, countryCode);
-			
-		} else if (menu.contains("2")) {
-			System.out.println("Create file 'iban.txt' near this app.");
-			System.out.println("File name must be 'iban.txt'");
-			System.out.println("Insert mfo");
-			String mfo = in.nextLine();
-			Path path = Paths.get(currentPath + "/iban.txt");
-			gen.convert(path, mfo);
-			
-		} else if (menu.contains("3")) {
-			System.out.print("How much accounts is needed to generate: ");
-			String length = in.nextLine();
-			System.out.println("Generate list in IBAN format? (y\\n)");
-			String isIban = in.nextLine();
-			System.out.print("Insert MFO = ");
-			String MFO = in.nextLine();
-			
-			if (isIban.contains("y")) gen.generateAccNumbers(length, true, MFO);
-			else gen.generateAccNumbers(length, false, MFO);
+		// 2 symbols UA
+		if (iso.length == 0 && iso.length > 2) {
+			fail("Error. Country code is incorrect.");
 		}
+		// for UA
+		if (acc.length == 0 || acc.length < 5 || acc.length > 19) {
+			fail("Error. Length must be from 5 to 19 chars Max.");
+		}
+		for (int j = 0; j < acc.length; j++) {
+			if (acc[j] <= 48 && acc[j] >= 57 && acc[j] <= 65 && acc[j] >= 90) {
+				fail("Error. Account number has incorrect symbol.");
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Generate integer
+	 * 
+	 * @param length
+	 * @return String
+	 */
+	public String generateInt(int length) {
+		String result = "";
+		Random r = new Random();
+		
+		for (int i = 0; i < length; i++) {
+			String bytes = Integer.toString(r.nextInt(9));
+			result += bytes;
+		}
+		return result;
+	}
+
+	/**
+	 * Generate list of accounts
+	 * 
+	 * @param length
+	 * @param isIBAN
+	 * @param MFO
+	 */
+	public String generateAccNumbers(int length, boolean isIBAN, String MFO) {
+		int count = 0;
+		String acc = "";
+
+		do {
+			String ran = generateInt(15);
+			if (keying(MFO, ran)) {
+				if (isIBAN) {
+					acc = getIBAN(MFO, ran, "UA");
+					return acc;
+				} else {
+					System.out.println(ran);
+				}
+				count++;
+			}
+		} while (count != length);
+		return acc;
+	}
+
+	/**
+	 * Check keying account number before get IBAN.
+	 * 
+	 * @param mfo
+	 * @param acc
+	 */
+	public boolean keying(String mfo, String acc) {
+		
+		if (mfo.length() != 6) {
+			System.out.println("MFO is incorrect!");
+		}
+
+		int[] WEIGHT = new int[] { 1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3 };
+		char key;
+		int sum;
+		char[] str = (mfo.substring(0, 5) + acc).toCharArray();
+		str[9] = '0';
+		sum = acc.length();
+		for (int i = 0; i < str.length; i++) {
+			sum += ((Character.digit(str[i], 10) * WEIGHT[i]) % 10);
+		}
+		key = Character.forDigit(((sum % 10) * 7) % 10, 10);
+
+		if (acc.charAt(4) == key)
+			return true;
+		else
+			return false;
+	}
+	
+	/**
+	 * Convert old account number to IBAN
+	 * 
+	 */
+	public void convert(Path filePath, String mfo) {
+		File out = new File(currentPath + "/iban-out.txt");
+		System.out.println("Your file location: " + out);
+
+		try {
+			List<String> content = Files.readAllLines(filePath);
+			FileOutputStream fout = new FileOutputStream(out, true);
+
+			for (int i = 0; i < content.size(); i++) {
+				String result = getIBAN(mfo, content.get(i), "UA") + "\n";
+				fout.write(result.getBytes());
+			}
+			fout.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 'UA' 'checksum' 'MFO' *0x?* 'account' 'number'
+	 * 
+	 * @param MFO
+	 * @param account
+	 * @param ISOCode
+	 * @return
+	 */
+	public String getIBAN(String MFO, String account, String ISOCode) {
+		String fl = ""; // first country code letter
+		String sl = ""; // second country code letter
+		String fullacc = "";
+		String zeroLine = "0";
+
+		char[] iso = ISOCode.toUpperCase().toCharArray();
+		char[] acc = account.toUpperCase().toCharArray();
+
+		// Get integer of letter from ISOCode (A = 10, B = 11 ...)
+		for (int k = 65; k <= 90; k++) {
+			if ((int) iso[0] == k)
+				fl = Integer.toString((k - 65) + 10);
+			if ((int) iso[1] == k)
+				sl = Integer.toString((k - 65) + 10);
+		}
+
+		// Find account symbol in ASCII table
+		for (int j = 0; j < account.length(); j++) {
+
+			// from 0 to 9 (ASCII 48 - 57)
+			if (acc[j] >= 48 && acc[j] <= 57) {
+				fullacc += acc[j];
+				continue;
+
+			} else if (acc[j] <= 90 && acc[j] >= 65) {
+
+				// from A to Z (ASCII 65 - 90)
+				for (int k = 65; k < 90; k++) {
+					if (acc[j] == k) {
+						String val = Integer.toString((k - 65) + 10);
+						fullacc += val;
+					}
+				}
+			}
+		}
+
+		// Get string from '0's
+		for (int i = 2; i <= (25 - MFO.length() - account.length()); i++) {
+			zeroLine += "0";
+		}
+
+		// full account value transforming to BigInteger
+		BigInteger how = new BigInteger(MFO + zeroLine + fullacc + fl + sl + "00", 10);
+		BigInteger rem = new BigInteger("97", 10);
+		BigInteger big = how.remainder(rem);
+
+		int sum = 98 - big.intValue();
+
+		if (sum <= 9) {
+			String sumRather = "0" + Integer.toString(sum);
+			return ISOCode.toUpperCase() + sumRather + MFO + zeroLine + account.toUpperCase();
+		}
+		return ISOCode.toUpperCase() + sum + MFO + zeroLine + account.toUpperCase();
+	}
+
+	/**
+	 * Assert
+	 * 
+	 * @param message
+	 */
+	public void fail(String message) {
+		if (message == null) {
+			throw new AssertionError();
+		}
+		throw new AssertionError(message);
 	}
 }
