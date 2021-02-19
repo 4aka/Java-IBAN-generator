@@ -1,8 +1,8 @@
 # IBAN___Java
 IBAN generator
 
-Press 1 - get IBAN (300335)\n
-Press 2 - get IBAN (311528)\n
+Press 1 - get IBAN (300335)
+Press 2 - get IBAN (311528)
 Press 3 - get IBAN (set MFO)
 Press 4 - convert list of IBAN
 Press 5 - generate random IBAN list
