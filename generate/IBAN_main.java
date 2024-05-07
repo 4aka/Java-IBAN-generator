@@ -1,5 +1,3 @@
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class IBAN_main {
@@ -8,153 +6,93 @@ public class IBAN_main {
     public static void main(String[] args) {
         IBANGen gen = new IBANGen();
 
-        System.out.println("Choose: ");
-        System.out.println("Press 1 - get IBAN (300335)");
-        System.out.println("Press 2 - get IBAN (311528)");
-        System.out.println("Press 3 - get IBAN (set MFO)");
-        System.out.println("Press 4 - convert list of IBAN");
-        System.out.println("Press 5 - generate random IBAN list");
-        System.out.println("Press 6 - get parametrized IBAN");
-        System.out.println("Press 7 - generation IBAN list to file");
-        System.out.println("Press 8 - Check account number keying");
-        System.out.println("Press m - menu.");
-        System.out.println("Press q - for exit.");
-
         Scanner in = new Scanner(System.in);
+        String mfo;
         String menu;
 
         con:
         do {
+            printMenu();
             menu = in.nextLine();
 
             switch (menu) {
 
                 case "1":
 
-                    System.out.println("Get random IBAN account (300335):");
+                    IBANGen.print("Generate IBAN based on 300335 MFO:");
                     String iban300335 = gen.getAcc300335();
                     gen.copyToClipboard(iban300335);
                     continue con;
 
                 case "2":
 
-                    System.out.println("Get random IBAN account (311528):");
-                    String iban311528 = gen.getAcc311528();
-                    gen.copyToClipboard(iban311528);
+                    IBANGen.print("Generate random IBAN based on filled in MFO:");
+                    IBANGen.print("Insert MFO");
+                    mfo = in.nextLine();
+                    String getAcc = gen.getAcc(mfo);
+                    gen.copyToClipboard(getAcc);
                     continue con;
 
                 case "3":
 
-                    System.out.println("random IBAN account with set MFO generation:");
-                    System.out.println("Insert MFO");
-                    String mfo2 = in.nextLine();
-                    String getAcc = gen.getAcc(mfo2);
-                    gen.copyToClipboard(getAcc);
+                    IBANGen.print("Random accounts list generation:");
+                    IBANGen.print("How much account do you need? ");
+                    int length = Integer.parseInt(in.nextLine());
+                    IBANGen.print("prefix: (if empty - here is used 194. accounts_black_list)");
+                    String prefix = in.nextLine();
+                    IBANGen.print("Generate list in IBAN format? (y\\n)");
+                    String isIban = in.nextLine();
+                    IBANGen.print("Insert MFO = ");
+                    mfo = in.nextLine();
+                    gen.generateAccNumbers(length, prefix, isIban.contains("y"), mfo);
                     continue con;
 
                 case "4":
 
-                    System.out.println("IBAN list convert:");
-                    System.out.println("-------------------------------------------------------");
-                    System.out.println("Please notice! Here is no any account checkers!");
-                    System.out.println("-------------------------------------------------------");
-                    System.out.println("Put your account numbers into 'iban.txt' near this app.");
-                    System.out.println("-------------------------------------------------------");
-                    System.out.println("File must have a name 'iban.txt'");
-                    System.out.println("-------------------------------------------------------");
-                    System.out.println("Insert MFO for convert to:");
-                    System.out.println("-------------------------------------------------------");
-                    String mfo = in.nextLine();
-                    Path path = Paths.get(currentPath + "/iban.txt");
-                    gen.convert(path, mfo);
-                    continue con;
-
-                case "5":
-
-                    System.out.println("Random accounts list generation:");
-                    System.out.println("How much account needs to generate: ");
-                    int length = Integer.parseInt(in.nextLine());
-                    System.out.println("prefix: (if empty - there is uses 194. accounts_black_list)");
-                    String prefix = in.nextLine();
-                    System.out.println("Generate list in IBAN format? (y\\n)");
-                    String isIban = in.nextLine();
-                    System.out.println("Insert MFO = ");
-                    String MFO1 = in.nextLine();
-                    gen.generateAccNumbers(length, prefix, isIban.contains("y"), MFO1);
-                    continue con;
-
-                case "6":
-
-                    System.out.println("Get parametrized IBAN:");
-                    System.out.println("Insert MFO = ");
+                    IBANGen.print("Generate IBAN from scratch:");
+                    IBANGen.print("Insert MFO = ");
                     String MFO = in.nextLine();
 
-                    System.out.println("Insert account number = ");
+                    IBANGen.print("Insert account number = ");
                     String account = in.nextLine();
 
                     while (!gen.keying(MFO, account)) {
-                        System.out.println("Keying wrong!");
-                        System.out.println("Insert account number = ");
+                        IBANGen.print("Keying wrong!");
+                        IBANGen.print("Insert account number = ");
                         account = in.nextLine();
                         gen.keying(MFO, account);
                     }
-                    System.out.println("Insert ISO country code = ");
+                    IBANGen.print("Insert ISO country code = ");
                     String countryCode = in.nextLine();
                     String paramIban = gen.getIBAN(MFO, account, countryCode);
                     gen.copyToClipboard(paramIban);
                     continue con;
 
-                case "7":
+                case "5":
 
-                    System.out.println("generation IBAN list to file");
-                    System.out.println("Insert file path: ex. D:/fileName.txt");
+                    IBANGen.print("Generate IBAN's list into file");
+                    IBANGen.print("Insert file path: ex. D:/fileName.txt");
                     String filePath = in.nextLine();
 
-                    System.out.println("Insert quantity");
+                    IBANGen.print("Insert quantity");
                     String quantity = in.nextLine();
 
-                    System.out.println("Insert MFO");
-                    String mfo3 = in.nextLine();
+                    IBANGen.print("Insert MFO");
+                    mfo = in.nextLine();
 
-                    gen.generateAccountsToFile(filePath, Integer.parseInt(quantity), mfo3);
-                    System.out.println("Done");
+                    gen.generateAccountsToFile(filePath, Integer.parseInt(quantity), mfo);
+                    IBANGen.print("Done");
                     continue con;
 
-                case "8":
+                case "6":
 
-                    System.out.println("Check account number keying:");
-                    System.out.println("Insert account number");
+                    IBANGen.print("Verify account number keying:");
+                    IBANGen.print("Insert account number");
                     String acc = in.nextLine();
-                    System.out.println("Insert mfo");
-                    String mfo4 = in.nextLine();
-                    if (gen.keying(mfo4, acc)) System.out.println("Account number is correct");
-                    else System.out.println("Account number is INCORRECT!");
-                    continue con;
-
-                case "42":
-
-                    System.out.println("    *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  * ** ** **");
-                    System.out.println("*  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * ");
-                    System.out.println("    *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  * ** ** **");
-                    System.out.println("*  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * ");
-                    System.out.println("----------  What's the question 'The Answer to the Ultimate Question of Life, --");
-                    System.out.println("---------------------------  the Universe, and Everything'  --------------------");
-                    System.out.println("    *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  * ** ** **");
-                    System.out.println("*  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * ");
-                    System.out.println("    *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  *   *  *  * ** ** **");
-                    System.out.println("*  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * *  *  * ");
-                    continue con;
-
-                case "V":
-
-                    for (int i = 0; i < 10; i++) {
-                        System.out.println("         vv        vv");
-                        System.out.println("          vv      vv       So, everything is        ");
-                        System.out.println("           vv    vv              FINE!  ");
-                        System.out.println("            vv  vv");
-                        System.out.println("             vvvv");
-                        System.out.println("              vv");
-                    }
+                    IBANGen.print("Insert mfo");
+                    mfo = in.nextLine();
+                    if (gen.keying(mfo, acc)) IBANGen.print("Keying is correct");
+                    else IBANGen.print("Keying is NOT correct!");
                     continue con;
 
                 case "q":
@@ -163,9 +101,24 @@ public class IBAN_main {
                     break;
 
                 default:
-                    System.out.println("Try again");
+                    printMenu();
+
             }
 
         } while (!menu.matches("q"));
+    }
+
+    private static void printMenu() {
+        IBANGen.print("");
+        IBANGen.print("");
+        IBANGen.print("-----------------------------------------");
+        IBANGen.print("Choose: ");
+        IBANGen.print("Press 1 - Generate IBAN based on 300335 MFO");
+        IBANGen.print("Press 2 - Generate random IBAN based on filled in MFO:");
+        IBANGen.print("Press 3 - Random accounts list generation:");
+        IBANGen.print("Press 4 - Generate IBAN from scratch:");
+        IBANGen.print("Press 5 - Generate IBAN's list into file");
+        IBANGen.print("Press 6 - Verify account number keying:");
+        IBANGen.print("Press q - for exit.");
     }
 }
