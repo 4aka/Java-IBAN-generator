@@ -19,19 +19,15 @@ public class IBANGen {
         return generateAccNumbers(1, "", true, mfo);
     }
 
-    public String getAcc311528() {
-        return generateAccNumbers(1, "", true, "311528");
-    }
-
     public String getAcc300335() {
-        return generateAccNumbers(1, "",true, "300335");
+        return generateAccNumbers(1, "", true, "300335");
     }
 
     public void copyToClipboard(String copy) {
         StringSelection stringSelection = new StringSelection(copy);
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(stringSelection, null);
-        System.out.println("###*** IBAN has copied to the clipboard ***###");
+        print("===== IBAN has copied to the clipboard =====");
     }
 
     /**
@@ -54,8 +50,8 @@ public class IBANGen {
      * Generate list of accounts
      *
      * @param quantity set accounts quantity
-     * @param isIBAN generate IBAN if true
-     * @param mfo   set MFO ex. 300335, 311528
+     * @param isIBAN   generate IBAN if true
+     * @param mfo      set MFO ex. 300335, 311528
      */
     public String generateAccNumbers(int quantity, String prefix, boolean isIBAN, String mfo) {
         int count = 0;
@@ -63,21 +59,16 @@ public class IBANGen {
         String ran;
 
         while (count != quantity) {
-            if (!prefix.isEmpty()) {
-                ran = prefix + generateInt(12);
-            } else {
-                ran = "194" + generateInt(12);
-            }
+            if (!prefix.isEmpty()) { ran = prefix + generateInt(12); }
+            else { ran = "194" + generateInt(12); }
 
             if (keying(mfo, ran)) { // check that account number is correct.
-
                 if (isIBAN) {
                     count += 1;
                     acc = getIBAN(mfo, ran, "UA");
-                    System.out.println(acc);
-
+                    print(acc);
                 } else {
-                    System.out.println(ran);
+                    print(ran);
                     count += 1;
                 }
             }
@@ -93,7 +84,7 @@ public class IBANGen {
      */
     public boolean keying(String mfo, String acc) {
 
-        int[] WEIGHT = new int[]{1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3};
+        final int[] WEIGHT = new int[]{1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3};
         char key;
         int sum;
         char[] str = (mfo.substring(0, 5) + acc).toCharArray();
@@ -108,61 +99,40 @@ public class IBANGen {
     }
 
     /**
-     * Convert old account number to IBAN
-     */
-    public void convert(Path filePath, String mfo) {
-        File out = new File(currentPath + "/iban-out.txt");
-        System.out.println("Your file location: " + out);
-
-        try {
-            List<String> content = Files.readAllLines(filePath);
-            FileOutputStream fout = new FileOutputStream(out, true);
-
-            for (String s : content) {
-                String result = getIBAN(mfo, s, "UA") + "\n";
-                fout.write(result.getBytes());
-            }
-            fout.close();
-        } catch (IOException e) {
-            System.out.println("Error! File iban.txt not found!");
-        }
-    }
-
-    /**
      * Generate list of accounts into file
      *
-     * @param filePath set file path for file
-     * @param mfo   set mfo.
+     * @param filePath set file path which will be used for data generation
+     * @param mfo      set mfo
      * @param quantity set accounts quantity
      */
     public void generateAccountsToFile(String filePath, int quantity, String mfo) {
         File out = new File(filePath);
-        System.out.println("File path is: " + filePath);
+        print("File path is: " + filePath);
 
         try {
-            FileOutputStream fout = new FileOutputStream(out, true);
+            FileOutputStream fileOutputStream = new FileOutputStream(out, true);
 
             for (int i = 0; i < quantity; i++) {
-                fout.write((generateAccNumbers(1, "",true, mfo) + "\n").getBytes());
+                fileOutputStream.write((generateAccNumbers(1, "", true, mfo) + "\n").getBytes());
             }
-            fout.close();
+            fileOutputStream.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            print(e.getMessage());
         }
     }
 
     /**
      * 'UA' 'checksum' 'MFO' *0x?* 'account' 'number'
      *
-     * @param MFO   set mfo
-     * @param account   set account number
+     * @param MFO     set mfo
+     * @param account set account number
      * @param ISOCode set ISO code ex. UA
      * @return IBAN account
      */
     public String getIBAN(String MFO, String account, String ISOCode) {
         String fl = ""; // first country code letter
         String sl = ""; // second country code letter
-        StringBuilder fullacc = new StringBuilder();
+        StringBuilder stringBuilder = new StringBuilder();
         StringBuilder zeroLine = new StringBuilder("0");
 
         assert account.length() > 19;
@@ -183,7 +153,7 @@ public class IBANGen {
 
             // from 0 to 9 (ASCII 48 - 57)
             if (acc[j] >= 48 && acc[j] <= 57) {
-                fullacc.append(acc[j]);
+                stringBuilder.append(acc[j]);
 
             } else if (acc[j] <= 90 && acc[j] >= 65) {
 
@@ -191,7 +161,7 @@ public class IBANGen {
                 for (int k = 65; k < 90; k++) {
                     if (acc[j] == k) {
                         String val = Integer.toString((k - 65) + 10);
-                        fullacc.append(val);
+                        stringBuilder.append(val);
                     }
                 }
             }
@@ -203,7 +173,7 @@ public class IBANGen {
         }
 
         // full account value transforming to BigInteger
-        BigInteger how = new BigInteger(MFO + zeroLine + fullacc + fl + sl + "00", 10);
+        BigInteger how = new BigInteger(MFO + zeroLine + stringBuilder + fl + sl + "00", 10);
         BigInteger rem = new BigInteger("97", 10);
         BigInteger big = how.remainder(rem);
 
@@ -214,5 +184,9 @@ public class IBANGen {
             return ISOCode.toUpperCase() + sumRather + MFO + zeroLine + account.toUpperCase();
         }
         return ISOCode.toUpperCase() + sum + MFO + zeroLine + account.toUpperCase();
+    }
+
+    public static void print(String text) {
+        System.out.println(text);
     }
 }
