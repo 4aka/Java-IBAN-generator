@@ -4,23 +4,27 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class IBANGen {
-    String currentPath = System.getProperty("user.dir");
+
+    final int[] WEIGHT = new int[]{1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3};
+    final int ACCOUNT_PART_MAX_LENGTH = 15;
+    final int IBAN_MAX_LENGTH = 25;
+    final String ISO_CODE_UA = "UA";
 
     /**
      * Get random account.
      */
     public String getAcc(String mfo) {
-        return generateAccNumbers(1, "", true, mfo);
+        return getIbanBasedOnParameters("", mfo);
     }
 
     public String getAcc300335() {
-        return generateAccNumbers(1, "", true, "300335");
+        return getIbanBasedOnParameters("", "300335");
     }
 
     public void copyToClipboard(String copy) {
@@ -31,71 +35,82 @@ public class IBANGen {
     }
 
     /**
-     * Generate integer
+     * Generate int
      *
-     * @param length set length of int
+     * @param length set int length
      */
     public String generateInt(int length) {
         StringBuilder result = new StringBuilder();
-        Random r = new Random();
+        Random random = new Random();
 
         for (int i = 0; i < length; i++) {
-            String bytes = Integer.toString(r.nextInt(9));
+            String bytes = Integer.toString(random.nextInt(9));
             result.append(bytes);
         }
         return result.toString();
     }
 
     /**
-     * Generate list of accounts
+     * Generate 1 account
      *
-     * @param quantity set accounts quantity
-     * @param isIBAN   generate IBAN if true
-     * @param mfo      set MFO ex. 300335, 311528
+     * @param mfo    set MFO ex. 300335, 311528
      */
-    public String generateAccNumbers(int quantity, String prefix, boolean isIBAN, String mfo) {
-        int count = 0;
-        String acc = "";
-        String ran;
-
-        while (count != quantity) {
-            if (!prefix.isEmpty()) { ran = prefix + generateInt(12); }
-            else { ran = "194" + generateInt(12); }
-
-            if (keying(mfo, ran)) { // check that account number is correct.
-                if (isIBAN) {
-                    count += 1;
-                    acc = getIBAN(mfo, ran, "UA");
-                    print(acc);
-                } else {
-                    print(ran);
-                    count += 1;
-                }
-            }
-        }
-        return acc;
+    public String getIbanBasedOnParameters(String prefix, String mfo) {
+        String validAccountNumber = generateValidAccNumber(prefix, mfo);
+        String iban = getIBAN(mfo, validAccountNumber, ISO_CODE_UA);
+        print(iban);
+        return iban;
     }
 
     /**
-     * Check keying account number before get IBAN.
+     * Generate accounts list
      *
-     * @param mfo set mfo ex. 300335, 311528
-     * @param acc set account number ex. 12366
+     * @param quantity
+     * @param prefix
+     * @param mfo
+     * @return
      */
-    public boolean keying(String mfo, String acc) {
+    public void generateAccNumbers(int quantity, String prefix, String mfo) {
+        List<String> accountsList = generateListWithValidAccNumbers(quantity, prefix, mfo);
+        printList(generateIbanList(accountsList, mfo));
+    }
 
-        final int[] WEIGHT = new int[]{1, 3, 7, 1, 3, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3};
-        char key;
-        int sum;
-        char[] str = (mfo.substring(0, 5) + acc).toCharArray();
-        str[9] = '0';
-        sum = acc.length();
-        for (int i = 0; i < str.length; i++) {
-            sum += ((Character.digit(str[i], 10) * WEIGHT[i]) % 10);
+    /**
+     * @param accountNumbers
+     * @param mfo
+     * @return
+     */
+    public List<String> generateIbanList(List<String> accountNumbers, String mfo) {
+        return accountNumbers.stream()
+                .map(acc -> getIBAN(mfo, acc, ISO_CODE_UA))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * @param quantity
+     * @param prefix
+     * @param mfo
+     * @return
+     */
+    public List<String> generateListWithValidAccNumbers(int quantity, String prefix, String mfo) {
+        List<String> validAccountNumbers = new ArrayList<>();
+        for (int i = 0; i < quantity; i++) {
+            validAccountNumbers.add(generateValidAccNumber(prefix, mfo));
         }
-        key = Character.forDigit(((sum % 10) * 7) % 10, 10);
+        return validAccountNumbers;
+    }
 
-        return acc.charAt(4) == key;
+    /**
+     * @param prefix
+     * @param mfo
+     * @return
+     */
+    public String generateValidAccNumber(String prefix, String mfo) {
+        String accountNumber;
+        do {
+            accountNumber = prefix.concat(generateInt(ACCOUNT_PART_MAX_LENGTH - prefix.length()));
+        } while (isKeyingValid(mfo, accountNumber));
+        return accountNumber;
     }
 
     /**
@@ -113,7 +128,7 @@ public class IBANGen {
             FileOutputStream fileOutputStream = new FileOutputStream(out, true);
 
             for (int i = 0; i < quantity; i++) {
-                fileOutputStream.write((generateAccNumbers(1, "", true, mfo) + "\n").getBytes());
+                fileOutputStream.write((getIbanBasedOnParameters("", mfo) + "\n").getBytes());
             }
             fileOutputStream.close();
         } catch (IOException e) {
@@ -130,50 +145,22 @@ public class IBANGen {
      * @return IBAN account
      */
     public String getIBAN(String MFO, String account, String ISOCode) {
-        String fl = ""; // first country code letter
-        String sl = ""; // second country code letter
-        StringBuilder stringBuilder = new StringBuilder();
-        StringBuilder zeroLine = new StringBuilder("0");
-
+        char[] iso = ISOCode.toUpperCase().toCharArray();
         assert account.length() > 19;
 
-        char[] iso = ISOCode.toUpperCase().toCharArray();
-        char[] acc = account.toUpperCase().toCharArray();
+        // Get ASCII number of letter from ISOCode (A = 10, B = 11 ...)
+        String firstLetterASCIINumber = getASCIINumber(iso[0]);
+        String secondLetterASCIINumber = getASCIINumber(iso[1]);
 
-        // Get integer of letter from ISOCode (A = 10, B = 11 ...)
-        for (int k = 65; k <= 90; k++) {
-            if ((int) iso[0] == k)
-                fl = Integer.toString((k - 65) + 10);
-            if ((int) iso[1] == k)
-                sl = Integer.toString((k - 65) + 10);
-        }
-
-        // Find account's symbol in ASCII table
-        for (int j = 0; j < account.length(); j++) {
-
-            // from 0 to 9 (ASCII 48 - 57)
-            if (acc[j] >= 48 && acc[j] <= 57) {
-                stringBuilder.append(acc[j]);
-
-            } else if (acc[j] <= 90 && acc[j] >= 65) {
-
-                // from A to Z (ASCII 65 - 90)
-                for (int k = 65; k < 90; k++) {
-                    if (acc[j] == k) {
-                        String val = Integer.toString((k - 65) + 10);
-                        stringBuilder.append(val);
-                    }
-                }
-            }
-        }
+        // convert account to ASCII format
+        StringBuilder stringBuilder = convertAccountNumberToASCII(account);
 
         // Get string from '0's
-        for (int i = 2; i <= (25 - MFO.length() - account.length()); i++) {
-            zeroLine.append("0");
-        }
+        int zeroLineShouldBe = IBAN_MAX_LENGTH - MFO.length() - account.length();
+        StringBuilder zeroLine = fillInRequiredLengthWithZero(zeroLineShouldBe);
 
         // full account value transforming to BigInteger
-        BigInteger how = new BigInteger(MFO + zeroLine + stringBuilder + fl + sl + "00", 10);
+        BigInteger how = new BigInteger(MFO + zeroLine + stringBuilder + firstLetterASCIINumber + secondLetterASCIINumber + "00", 10);
         BigInteger rem = new BigInteger("97", 10);
         BigInteger big = how.remainder(rem);
 
@@ -186,7 +173,95 @@ public class IBANGen {
         return ISOCode.toUpperCase() + sum + MFO + zeroLine + account.toUpperCase();
     }
 
+    /**
+     *
+     * @param accountNumberInDigitFormat
+     * @return
+     */
+    public StringBuilder convertAccountNumberToASCII(String accountNumberInDigitFormat) {
+        StringBuilder stringBuilder = new StringBuilder();
+        char[] result = accountNumberInDigitFormat.toUpperCase().toCharArray();
+
+        for (int j = 0; j < accountNumberInDigitFormat.length(); j++) {
+
+            // from 0 to 9 (ASCII 48 - 57)
+            if (result[j] >= 48 && result[j] <= 57) {
+                stringBuilder.append(result[j]);
+
+            // from A to Z (ASCII 65 - 90)
+            } else if (result[j] >= 65 && result[j] <= 90) {
+
+                for (int k = 65; k < 90; k++) {
+                    if (result[j] == k) {
+                        String val = Integer.toString((k - 65) + 10);
+                        stringBuilder.append(val);
+                    }
+                }
+            }
+        }
+        return stringBuilder;
+    }
+
+    /**
+     *
+     * @param zeroLineShouldBe
+     * @return
+     */
+    public StringBuilder fillInRequiredLengthWithZero(int zeroLineShouldBe) {
+        StringBuilder zeroLine = new StringBuilder("0");
+        for (int i = 2; i <= zeroLineShouldBe; i++) {
+            zeroLine.append("0");
+        }
+        return zeroLine;
+    }
+
+    /**
+     *
+     * @param letter
+     * @return
+     */
+    public String getASCIINumber(char letter) {
+        String asciiNumber = "";
+        for (int k = 65; k <= 90; k++) {
+            if ((int) letter == k) asciiNumber = Integer.toString((k - 65) + 10);
+        }
+        return asciiNumber;
+    }
+
+    /**
+     *
+     * @param text
+     */
     public static void print(String text) {
         System.out.println(text);
+    }
+
+    /**
+     *
+     * @param list
+     */
+    public static void printList(List<String> list) {
+        list.forEach(System.out::println);
+    }
+
+    /**
+     * Check isKeyingValid account number before get IBAN.
+     * Code from internet
+     *
+     * @param mfo set mfo ex. 300335, 311528
+     * @param acc set account number ex. 12366
+     */
+    public boolean isKeyingValid(String mfo, String acc) {
+        char key;
+        int sum;
+        char[] str = (mfo.substring(0, 5) + acc).toCharArray();
+        str[9] = '0';
+        sum = acc.length();
+        for (int i = 0; i < str.length; i++) {
+            sum += ((Character.digit(str[i], 10) * WEIGHT[i]) % 10);
+        }
+        key = Character.forDigit(((sum % 10) * 7) % 10, 10);
+
+        return acc.charAt(4) == key;
     }
 }

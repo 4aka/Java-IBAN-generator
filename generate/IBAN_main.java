@@ -1,14 +1,14 @@
 import java.util.Scanner;
 
 public class IBAN_main {
-    static String currentPath = System.getProperty("user.dir");
 
     public static void main(String[] args) {
         IBANGen gen = new IBANGen();
-
         Scanner in = new Scanner(System.in);
         String mfo;
         String menu;
+
+        // Validation https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.iban.com/iban-checker&ved=2ahUKEwiQjvj3uvyFAxUrKhAIHXBCAu8QFnoECAYQAQ&usg=AOvVaw3MwI2mM4cTfkDgS7ULC2iT
 
         con:
         do {
@@ -41,10 +41,9 @@ public class IBAN_main {
                     IBANGen.print("prefix: (if empty - here is used 194. accounts_black_list)");
                     String prefix = in.nextLine();
                     IBANGen.print("Generate list in IBAN format? (y\\n)");
-                    String isIban = in.nextLine();
                     IBANGen.print("Insert MFO = ");
                     mfo = in.nextLine();
-                    gen.generateAccNumbers(length, prefix, isIban.contains("y"), mfo);
+                    gen.generateAccNumbers(length, prefix, mfo);
                     continue con;
 
                 case "4":
@@ -56,15 +55,16 @@ public class IBAN_main {
                     IBANGen.print("Insert account number = ");
                     String account = in.nextLine();
 
-                    while (!gen.keying(MFO, account)) {
+                    while (!gen.isKeyingValid(MFO, account)) {
                         IBANGen.print("Keying wrong!");
                         IBANGen.print("Insert account number = ");
                         account = in.nextLine();
-                        gen.keying(MFO, account);
+                        gen.isKeyingValid(MFO, account);
                     }
                     IBANGen.print("Insert ISO country code = ");
                     String countryCode = in.nextLine();
                     String paramIban = gen.getIBAN(MFO, account, countryCode);
+                    IBANGen.print(paramIban);
                     gen.copyToClipboard(paramIban);
                     continue con;
 
@@ -72,6 +72,7 @@ public class IBAN_main {
 
                     IBANGen.print("Generate IBAN's list into file");
                     IBANGen.print("Insert file path: ex. D:/fileName.txt");
+                    IBANGen.print("Your current directory: " + System.getProperty("user.dir"));
                     String filePath = in.nextLine();
 
                     IBANGen.print("Insert quantity");
@@ -86,12 +87,12 @@ public class IBAN_main {
 
                 case "6":
 
-                    IBANGen.print("Verify account number keying:");
+                    IBANGen.print("Verify account number isKeyingValid:");
                     IBANGen.print("Insert account number");
                     String acc = in.nextLine();
                     IBANGen.print("Insert mfo");
                     mfo = in.nextLine();
-                    if (gen.keying(mfo, acc)) IBANGen.print("Keying is correct");
+                    if (gen.isKeyingValid(mfo, acc)) IBANGen.print("Keying is correct");
                     else IBANGen.print("Keying is NOT correct!");
                     continue con;
 
@@ -118,7 +119,7 @@ public class IBAN_main {
         IBANGen.print("Press 3 - Random accounts list generation:");
         IBANGen.print("Press 4 - Generate IBAN from scratch:");
         IBANGen.print("Press 5 - Generate IBAN's list into file");
-        IBANGen.print("Press 6 - Verify account number keying:");
+        IBANGen.print("Press 6 - Verify account number isKeyingValid:");
         IBANGen.print("Press q - for exit.");
     }
 }
